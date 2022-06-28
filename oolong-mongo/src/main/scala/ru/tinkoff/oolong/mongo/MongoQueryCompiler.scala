@@ -16,70 +16,70 @@ import ru.tinkoff.oolong.*
 import ru.tinkoff.oolong.bson.*
 import ru.tinkoff.oolong.mongo.MongoQueryNode as MQ
 
-object MongoQueryCompiler extends Backend[QExpr, MQ, BsonDocument] {
+object MongoQueryCompiler extends Backend[OolongQuery, MQ, BsonDocument] {
 
-  override def opt(ast: QExpr)(using quotes: Quotes): MongoQueryNode = {
+  override def opt(ast: OolongQuery)(using quotes: Quotes): MongoQueryNode = {
     import quotes.reflect.*
 
     ast match {
-      case QExpr.Prop(path) => MQ.Field(path)
-      case QExpr.Gte(x, y)  => MQ.OnField(getField(x), MQ.Gte(opt(y)))
-      case QExpr.Lte(x, y)  => MQ.OnField(getField(x), MQ.Lte(opt(y)))
-      case QExpr.Gt(x, y)   => MQ.OnField(getField(x), MQ.Gt(opt(y)))
-      case QExpr.Lt(x, y)   => MQ.OnField(getField(x), MQ.Lt(opt(y)))
-      case QExpr.Eq(x, y)   => MQ.OnField(getField(x), MQ.Eq(opt(y)))
-      case QExpr.Ne(x, y)   => MQ.OnField(getField(x), MQ.Ne(opt(y)))
-      case QExpr.In(x, exprs) =>
+      case OolongQuery.Prop(path) => MQ.Field(path)
+      case OolongQuery.Gte(x, y)  => MQ.OnField(getField(x), MQ.Gte(opt(y)))
+      case OolongQuery.Lte(x, y)  => MQ.OnField(getField(x), MQ.Lte(opt(y)))
+      case OolongQuery.Gt(x, y)   => MQ.OnField(getField(x), MQ.Gt(opt(y)))
+      case OolongQuery.Lt(x, y)   => MQ.OnField(getField(x), MQ.Lt(opt(y)))
+      case OolongQuery.Eq(x, y)   => MQ.OnField(getField(x), MQ.Eq(opt(y)))
+      case OolongQuery.Ne(x, y)   => MQ.OnField(getField(x), MQ.Ne(opt(y)))
+      case OolongQuery.In(x, exprs) =>
         MQ.OnField(
           getField(x),
           MQ.In(handleArrayConds(exprs))
         )
-      case QExpr.Nin(x, exprs) =>
+      case OolongQuery.Nin(x, exprs) =>
         MQ.OnField(
           getField(x),
           MQ.Nin(handleArrayConds(exprs))
         )
-      case QExpr.And(exprs)              => MQ.And(exprs map opt)
-      case QExpr.Or(exprs)               => MQ.Or(exprs map opt)
-      case QExpr.Constant(s)             => MQ.Constant(s)
-      case QExpr.Exists(x, y)            => MQ.OnField(getField(x), MQ.Exists(opt(y)))
-      case QExpr.Size(x, y)              => MQ.OnField(getField(x), MQ.Size(opt(y)))
-      case QExpr.ScalaCode(code)         => MQ.ScalaCode(code)
-      case QExpr.ScalaCodeIterable(iter) => MQ.ScalaCodeIterable(iter)
-      case QExpr.Subquery(code) =>
+      case OolongQuery.And(exprs)              => MQ.And(exprs map opt)
+      case OolongQuery.Or(exprs)               => MQ.Or(exprs map opt)
+      case OolongQuery.Constant(s)             => MQ.Constant(s)
+      case OolongQuery.Exists(x, y)            => MQ.OnField(getField(x), MQ.Exists(opt(y)))
+      case OolongQuery.Size(x, y)              => MQ.OnField(getField(x), MQ.Size(opt(y)))
+      case OolongQuery.ScalaCode(code)         => MQ.ScalaCode(code)
+      case OolongQuery.ScalaCodeIterable(iter) => MQ.ScalaCodeIterable(iter)
+      case OolongQuery.Subquery(code) =>
         code match {
           case '{ $doc: BsonDocument } => MQ.Subquery(doc)
           case _ =>
             report.errorAndAbort(s"Expected the subquery inside 'unchecked(...)' to have 'org.mongodb.scala.bson.BsonDocument' type, but the subquery is '${code.show}'")
         }
-      case not: QExpr.Not => handleInnerNot(not)
+      case not: OolongQuery.Not => handleInnerNot(not)
     }
   }
 
-  def getField(f: QExpr)(using quotes: Quotes): MQ.Field =
+  def getField(f: OolongQuery)(using quotes: Quotes): MQ.Field =
     import quotes.reflect.*
     f match
-      case QExpr.Prop(path) => MQ.Field(path)
+      case OolongQuery.Prop(path) => MQ.Field(path)
       case _                => report.errorAndAbort("Field is of wrong type")
 
-  def handleInnerNot(not: QExpr.Not)(using quotes: Quotes): MongoQueryNode =
+  def handleInnerNot(not: OolongQuery.Not)(using quotes: Quotes): MongoQueryNode =
     import quotes.reflect.*
     not.x match
-      case QExpr.Gte(x, y)  => MQ.OnField(getField(x), MQ.Not(MQ.Gte(opt(y))))
-      case QExpr.Lte(x, y)  => MQ.OnField(getField(x), MQ.Not(MQ.Lte(opt(y))))
-      case QExpr.Gt(x, y)   => MQ.OnField(getField(x), MQ.Not(MQ.Gt(opt(y))))
-      case QExpr.Lt(x, y)   => MQ.OnField(getField(x), MQ.Not(MQ.Lt(opt(y))))
-      case QExpr.Eq(x, y)   => MQ.OnField(getField(x), MQ.Not(MQ.Eq(opt(y))))
-      case QExpr.Ne(x, y)   => MQ.OnField(getField(x), MQ.Not(MQ.Ne(opt(y))))
-      case QExpr.Size(x, y) => MQ.OnField(getField(x), MQ.Not(MQ.Size(opt(y))))
-      case QExpr.In(x, y)   => MQ.OnField(getField(x), MQ.Not(MQ.In(handleArrayConds(y))))
-      case QExpr.Nin(x, y)  => MQ.OnField(getField(x), MQ.Not(MQ.Nin(handleArrayConds(y))))
+      case OolongQuery.Gte(x, y)  => MQ.OnField(getField(x), MQ.Not(MQ.Gte(opt(y))))
+      case OolongQuery.Lte(x, y)  => MQ.OnField(getField(x), MQ.Not(MQ.Lte(opt(y))))
+      case OolongQuery.Gt(x, y)   => MQ.OnField(getField(x), MQ.Not(MQ.Gt(opt(y))))
+      case OolongQuery.Lt(x, y)   => MQ.OnField(getField(x), MQ.Not(MQ.Lt(opt(y))))
+      case OolongQuery.Eq(x, y)   => MQ.OnField(getField(x), MQ.Not(MQ.Eq(opt(y))))
+      case OolongQuery.Ne(x, y)   => MQ.OnField(getField(x), MQ.Not(MQ.Ne(opt(y))))
+      case OolongQuery.Size(x, y) => MQ.OnField(getField(x), MQ.Not(MQ.Size(opt(y))))
+      case OolongQuery.In(x, y)   => MQ.OnField(getField(x), MQ.Not(MQ.In(handleArrayConds(y))))
+      case OolongQuery.Nin(x, y)  => MQ.OnField(getField(x), MQ.Not(MQ.Nin(handleArrayConds(y))))
       case _                => report.errorAndAbort("Wrong operator inside $not")
 
-  def handleArrayConds(x: List[QExpr] | QExpr)(using quotes: Quotes): List[MQ] | MQ =
+  def handleArrayConds(x: List[OolongQuery] | OolongQuery)(using quotes: Quotes): List[MQ] | MQ =
     x match
-      case list: List[QExpr @unchecked] => list map opt
-      case expr: QExpr                  => opt(expr)
+      case list: List[OolongQuery @unchecked] => list map opt
+      case expr: OolongQuery                  => opt(expr)
 
   override def render(node: MongoQueryNode)(using quotes: Quotes): String =
     import quotes.reflect.*

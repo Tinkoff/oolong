@@ -45,7 +45,7 @@ private[oolong] def queryImpl[Doc: Type](input: Expr[Doc => Boolean])(using quot
 
   val parser = new DefaultAstParser
 
-  val ast          = parser.parseQExpr(input)
+  val ast          = parser.parseOolongQuery(input)
   val optimizedAst = LogicalOptimizer.optimize(ast)
 
   val optRepr   = opt(optimizedAst)

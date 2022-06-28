@@ -2,7 +2,7 @@ package ru.tinkoff.oolong
 
 private[oolong] object LogicalOptimizer {
 
-  def optimize(ast: QExpr): QExpr = {
+  def optimize(ast: OolongQuery): OolongQuery = {
 
     // Example:
     //
@@ -17,32 +17,32 @@ private[oolong] object LogicalOptimizer {
     // grandparent: And(x, y, z)
     //     /      |      \
     //    x       y       z
-    def flatten(grandparent: QExpr): QExpr = grandparent match {
-      case QExpr.And(parents) =>
+    def flatten(grandparent: OolongQuery): OolongQuery = grandparent match {
+      case OolongQuery.And(parents) =>
         val newParents = parents.flatMap {
-          case QExpr.And(children) => children
+          case OolongQuery.And(children) => children
           case parent              => List(parent)
         }
-        QExpr.And(newParents)
-      case QExpr.Or(parents) =>
+        OolongQuery.And(newParents)
+      case OolongQuery.Or(parents) =>
         val newParents = parents.flatMap {
-          case QExpr.Or(children) => children
+          case OolongQuery.Or(children) => children
           case parent             => List(parent)
         }
-        QExpr.Or(newParents)
+        OolongQuery.Or(newParents)
       case _ =>
         grandparent
     }
 
     ast match {
-      case QExpr.And(children)     => flatten(QExpr.And(children.map(optimize)))
-      case QExpr.Or(children)      => flatten(QExpr.Or(children.map(optimize)))
-      case QExpr.Gte(x, y)         => QExpr.Gte(optimize(x), optimize(y))
-      case QExpr.Lte(x, y)         => QExpr.Lte(optimize(x), optimize(y))
-      case QExpr.Eq(x, y)          => QExpr.Eq(optimize(x), optimize(y))
-      case QExpr.Plus(x, y)        => QExpr.Plus(optimize(x), optimize(y))
-      case QExpr.Minus(x, y)       => QExpr.Minus(optimize(x), optimize(y))
-      case QExpr.Not(QExpr.Not(e)) => e
+      case OolongQuery.And(children)     => flatten(OolongQuery.And(children.map(optimize)))
+      case OolongQuery.Or(children)      => flatten(OolongQuery.Or(children.map(optimize)))
+      case OolongQuery.Gte(x, y)         => OolongQuery.Gte(optimize(x), optimize(y))
+      case OolongQuery.Lte(x, y)         => OolongQuery.Lte(optimize(x), optimize(y))
+      case OolongQuery.Eq(x, y)          => OolongQuery.Eq(optimize(x), optimize(y))
+      case OolongQuery.Plus(x, y)        => OolongQuery.Plus(optimize(x), optimize(y))
+      case OolongQuery.Minus(x, y)       => OolongQuery.Minus(optimize(x), optimize(y))
+      case OolongQuery.Not(OolongQuery.Not(e)) => e
       case _                       => ast
     }
   }

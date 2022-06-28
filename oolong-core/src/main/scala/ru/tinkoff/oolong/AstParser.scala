@@ -10,7 +10,7 @@ import ru.tinkoff.oolong.Utils.*
 import ru.tinkoff.oolong.dsl.*
 
 private[oolong] trait AstParser {
-  def parseQExpr[Doc: Type](input: Expr[Doc => Boolean]): QExpr
+  def parseOolongQuery[Doc: Type](input: Expr[Doc => Boolean]): OolongQuery
 
   def parseUExpr[Doc: Type](input: Expr[Updater[Doc] => Updater[Doc]]): UExpr
 }
@@ -22,11 +22,11 @@ private[oolong] class DefaultAstParser(using quotes: Quotes) extends AstParser {
     def apply(t: T): Ast
   }
 
-  override def parseQExpr[Doc: Type](input: Expr[Doc => Boolean]): QExpr = {
+  override def parseOolongQuery[Doc: Type](input: Expr[Doc => Boolean]): OolongQuery = {
 
-    given makeConst[T]: MakeConst[T, QExpr] = (t: T) => QExpr.Constant(t)
+    given makeConst[T]: MakeConst[T, OolongQuery] = (t: T) => OolongQuery.Constant(t)
 
-    def parseIterable[T: Type](expr: Expr[Seq[T] | Set[T]]): List[QExpr] | QExpr =
+    def parseIterable[T: Type](expr: Expr[Seq[T] | Set[T]]): List[OolongQuery] | OolongQuery =
       expr match {
         case AsIterable(elems) =>
           elems.map {
@@ -39,85 +39,85 @@ private[oolong] class DefaultAstParser(using quotes: Quotes) extends AstParser {
             case '{ $t: Float }   => makeConst(extractConstant[Float](t.value))
             case '{ $t: String }  => makeConst(extractConstant[String](t.value))
             case '{ $t: Char }    => makeConst(extractConstant[Char](t.value))
-            case '{ lift($x: t) } => QExpr.ScalaCode(x)
-            case x                => QExpr.ScalaCode(x) // are we sure we need this this case?
+            case '{ lift($x: t) } => OolongQuery.ScalaCode(x)
+            case x                => OolongQuery.ScalaCode(x) // are we sure we need this this case?
           }.toList
-        case '{ type t; lift($x: Seq[`t`] | Set[`t`]) } => QExpr.ScalaCodeIterable(x)
+        case '{ type t; lift($x: Seq[`t`] | Set[`t`]) } => OolongQuery.ScalaCodeIterable(x)
         case _ =>
           report.errorAndAbort("Unexpected expr while parsing AST: " + expr.asTerm.show(using Printer.TreeStructure))
       }
 
     val (paramName, rhs) = unwrapLambda(input.asTerm)
 
-    def parse(input: Expr[_]): QExpr = input match {
+    def parse(input: Expr[_]): OolongQuery = input match {
       case '{ ($x: Boolean) || ($y: Boolean) } =>
-        QExpr.Or(List(parse(x), parse(y)))
+        OolongQuery.Or(List(parse(x), parse(y)))
 
       case '{ ($x: Boolean) && ($y: Boolean) } =>
-        QExpr.And(List(parse(x), parse(y)))
+        OolongQuery.And(List(parse(x), parse(y)))
 
       case '{ ($x: Seq[_]).size == ($y: Int) } =>
-        QExpr.Size(parse(x), parse(y))
+        OolongQuery.Size(parse(x), parse(y))
 
       case '{ ($x: Seq[_]).length == ($y: Int) } =>
-        QExpr.Size(parse(x), parse(y))
+        OolongQuery.Size(parse(x), parse(y))
 
       case AsTerm(Apply(Select(lhs, "<="), List(rhs))) =>
-        QExpr.Lte(parse(lhs.asExpr), parse(rhs.asExpr))
+        OolongQuery.Lte(parse(lhs.asExpr), parse(rhs.asExpr))
 
       case AsTerm(Apply(Select(lhs, ">="), List(rhs))) =>
-        QExpr.Gte(parse(lhs.asExpr), parse(rhs.asExpr))
+        OolongQuery.Gte(parse(lhs.asExpr), parse(rhs.asExpr))
 
       case AsTerm(Apply(Select(lhs, "=="), List(rhs))) =>
-        QExpr.Eq(parse(lhs.asExpr), parse(rhs.asExpr))
+        OolongQuery.Eq(parse(lhs.asExpr), parse(rhs.asExpr))
 
       case AsTerm(Apply(Select(lhs, "<"), List(rhs))) =>
-        QExpr.Lt(parse(lhs.asExpr), parse(rhs.asExpr))
+        OolongQuery.Lt(parse(lhs.asExpr), parse(rhs.asExpr))
 
       case AsTerm(Apply(Select(lhs, ">"), List(rhs))) =>
-        QExpr.Gt(parse(lhs.asExpr), parse(rhs.asExpr))
+        OolongQuery.Gt(parse(lhs.asExpr), parse(rhs.asExpr))
 
       case AsTerm(Apply(Select(lhs, "!="), List(rhs))) =>
-        QExpr.Ne(parse(lhs.asExpr), parse(rhs.asExpr))
+        OolongQuery.Ne(parse(lhs.asExpr), parse(rhs.asExpr))
 
       case AsTerm(Apply(TypeApply(Select(lhs @ Select(_, _), "contains"), _), List(rhs))) =>
-        QExpr.Eq(parse(lhs.asExpr), parse(rhs.asExpr))
+        OolongQuery.Eq(parse(lhs.asExpr), parse(rhs.asExpr))
 
       case AsTerm(Select(Apply(TypeApply(Select(lhs @ Select(_, _), "contains"), _), List(rhs)), "unary_!")) =>
-        QExpr.Ne(parse(lhs.asExpr), parse(rhs.asExpr))
+        OolongQuery.Ne(parse(lhs.asExpr), parse(rhs.asExpr))
 
       case '{ type t; ($s: Seq[`t`]).contains($x: `t`) } =>
-        QExpr.In(parse(x), parseIterable(s))
+        OolongQuery.In(parse(x), parseIterable(s))
 
       case '{ type t; !($s: Seq[`t`]).contains($x: `t`) } =>
-        QExpr.Nin(parse(x), parseIterable(s))
+        OolongQuery.Nin(parse(x), parseIterable(s))
 
       case '{ type t; ($s: Set[`t`]).contains($x: `t`) } =>
-        QExpr.In(parse(x), parseIterable(s))
+        OolongQuery.In(parse(x), parseIterable(s))
 
       case '{ type t; !($s: Set[`t`]).contains($x: `t`) } =>
-        QExpr.Nin(parse(x), parseIterable(s))
+        OolongQuery.Nin(parse(x), parseIterable(s))
 
       case '{ ($x: Iterable[_]).isEmpty } =>
-        QExpr.Size(parse(x), QExpr.Constant(0))
+        OolongQuery.Size(parse(x), OolongQuery.Constant(0))
 
       case '{ ($x: Option[_]).isEmpty } =>
-        QExpr.Exists(parse(x), QExpr.Constant(false))
+        OolongQuery.Exists(parse(x), OolongQuery.Constant(false))
 
       case '{ ($x: Option[_]).isDefined } =>
-        QExpr.Exists(parse(x), QExpr.Constant(true))
+        OolongQuery.Exists(parse(x), OolongQuery.Constant(true))
 
       case PropSelector(name, path) if name == paramName =>
-        QExpr.Prop(path)
+        OolongQuery.Prop(path)
 
       case '{ lift($x: t) } =>
-        QExpr.ScalaCode(x)
+        OolongQuery.ScalaCode(x)
 
       case '{ unchecked($x: t) } =>
-        QExpr.Subquery(x)
+        OolongQuery.Subquery(x)
 
       case '{ !($x: Boolean) } =>
-        QExpr.Not(parse(x))
+        OolongQuery.Not(parse(x))
 
       case AsTerm(Literal(DoubleConstant(c))) =>
         makeConst(c)
