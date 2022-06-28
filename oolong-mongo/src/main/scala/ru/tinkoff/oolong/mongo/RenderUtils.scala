@@ -106,7 +106,7 @@ private[oolong] object RenderUtils {
               .getOrElse(name)
         case AsIterable(list) => list.map(parseConstant(_)(definitions)).mkString("[", ", ", "]")
         case AsSome(value)    => parseConstant(value)(definitions)
-        case '{ ${ x }: t }   => parseCaseClass[t](x)
+        case '{ ${ x }: t } if TypeRepr.of[t].typeSymbol.flags.is(Flags.Case) => parseCaseClass[t](x)
         case _                => "?"
 
     parseCaseClass(value)
