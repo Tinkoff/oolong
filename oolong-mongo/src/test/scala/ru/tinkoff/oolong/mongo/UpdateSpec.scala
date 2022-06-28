@@ -15,6 +15,7 @@ import org.mongodb.scala.bson.BsonString
 import org.scalatest.funsuite.AnyFunSuite
 
 import ru.tinkoff.oolong.bson.BsonEncoder
+import ru.tinkoff.oolong.bson.annotation.BsonKey
 import ru.tinkoff.oolong.bson.given
 import ru.tinkoff.oolong.dsl.*
 
@@ -30,7 +31,7 @@ class UpdateSpec extends AnyFunSuite {
   )
 
   case class InnerClass(
-      fieldOne: String,
+      @BsonKey("FieldOne") fieldOne: String,
       fieldTwo: Int,
       fieldThree: Option[Long] = None,
       fieldFour: LocalDate = LocalDate.now(),

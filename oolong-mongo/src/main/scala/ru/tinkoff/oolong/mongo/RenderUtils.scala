@@ -7,6 +7,7 @@ import scala.quoted.Type
 import ru.tinkoff.oolong.Utils.AsIterable
 import ru.tinkoff.oolong.Utils.AsSome
 import ru.tinkoff.oolong.Utils.AsTerm
+import ru.tinkoff.oolong.bson.annotation.BsonKey
 
 private[oolong] object RenderUtils {
 
@@ -56,6 +57,19 @@ private[oolong] object RenderUtils {
 
       paramsAndDefsOpt match
         case Some(params -> definitions) =>
+          println(
+            TypeRepr
+              .of[A]
+              .classSymbol
+              .flatMap(
+                _.primaryConstructor.paramSymss.headOption
+                  .map(
+                    _.map(s => s.name -> getRenamedFieldName(s.getAnnotation(TypeRepr.of[BsonKey].typeSymbol)))
+                  )
+              )
+              .map(_.toMap[String, Option[String]])
+              .collect { case (f, Some(s)) => (f, s) }
+          )
           val fields = repr.caseFields.map(_.name)
           val res = fields.zip(params).map { case (name, value) =>
             name + ":" + " " + parseConstant[A](value.asExpr)(definitions.map { case (a, b) => (a.toString, b) })
@@ -64,26 +78,15 @@ private[oolong] object RenderUtils {
         case _ => "?"
     }
 
+    def getRenamedFieldName(annot: Option[Term]): Option[String] =
+      annot match
+        case Some(Apply(Select(New(TypeIdent("BsonKey")), _), List(Literal(StringConstant(renamed))))) => Some(renamed)
+        case _                                                                                         => None
+    end getRenamedFieldName
+
     def parseConstant[A: Type](expr: Expr[Any])(definitions: Map[String, q.reflect.Term]): String =
       expr match
-        case AsTerm(Literal(DoubleConstant(c))) =>
-          c.toString
-        case AsTerm(Literal(FloatConstant(c))) =>
-          c.toString
-        case AsTerm(Literal(LongConstant(c))) =>
-          c.toString
-        case AsTerm(Literal(IntConstant(c))) =>
-          c.toString
-        case AsTerm(Literal(ShortConstant(c))) =>
-          c.toString
-        case AsTerm(Literal(ByteConstant(c))) =>
-          c.toString
-        case AsTerm(Literal(StringConstant(c))) =>
-          s"\"$c\""
-        case AsTerm(Literal(CharConstant(c))) =>
-          c.toString
-        case AsTerm(Literal(BooleanConstant(c))) =>
-          c.toString
+        case RenderedLiteral(repr) => repr
         case AsTerm(Select(_, name)) if name.contains("$lessinit$greater$default$") =>
           TypeRepr
             .of[A]
@@ -94,9 +97,10 @@ private[oolong] object RenderUtils {
             .flatMap(_.tree.asInstanceOf[DefDef].rhs)
             .map(s => parseConstant[A](s.asExpr)(definitions))
             .getOrElse(name)
-        case AsTerm(NamedArg(_, const))                    => parseConstant(const.asExpr)(definitions)
-        case AsTerm(Select(Ident(cl), method))             => s"Function($cl.$method)"
-        case AsTerm(Apply(Select(Ident(cl), method), Nil)) => s"Function($cl.$method())"
+        case AsTerm(NamedArg(_, const))        => parseConstant(const.asExpr)(definitions)
+        case AsTerm(Select(Ident(cl), method)) => s"Function($cl.$method)"
+        case AsTerm(Apply(Select(Ident(cl), method), list)) =>
+          s"Function($cl.$method(${list.map(_.asExpr).map(parseConstant(_)(Map.empty)).mkString(", ")}))"
         case AsTerm(Ident(name)) =>
           if (name == "None") "null"
           else
@@ -107,7 +111,28 @@ private[oolong] object RenderUtils {
         case AsIterable(list) => list.map(parseConstant(_)(definitions)).mkString("[", ", ", "]")
         case AsSome(value)    => parseConstant(value)(definitions)
         case '{ ${ x }: t } if TypeRepr.of[t].typeSymbol.flags.is(Flags.Case) => parseCaseClass[t](x)
-        case _                => "?"
+        case _                                                                => "?"
+    end parseConstant
 
     parseCaseClass(value)
+
+  end renderCaseClass
+
+  object RenderedLiteral:
+    def unapply(expr: Expr[Any])(using q: Quotes): Option[String] =
+      import q.reflect.*
+      expr match
+        case AsTerm(Literal(DoubleConstant(c)))  => Some(c.toString)
+        case AsTerm(Literal(FloatConstant(c)))   => Some(c.toString)
+        case AsTerm(Literal(LongConstant(c)))    => Some(c.toString)
+        case AsTerm(Literal(IntConstant(c)))     => Some(c.toString)
+        case AsTerm(Literal(ShortConstant(c)))   => Some(c.toString)
+        case AsTerm(Literal(ByteConstant(c)))    => Some(c.toString)
+        case AsTerm(Literal(StringConstant(c)))  => Some(s"\"$c\"")
+        case AsTerm(Literal(CharConstant(c)))    => Some(c.toString)
+        case AsTerm(Literal(BooleanConstant(c))) => Some(c.toString)
+        case _                                   => None
+
+  end RenderedLiteral
+
 }
