@@ -84,6 +84,12 @@ private[oolong] object RenderUtils:
         case _                                                                                         => None
     end getRenamedFieldName
 
+    def getRenamedFieldName(annot: Option[Term]): Option[String] =
+      annot match
+        case Some(Apply(Select(New(TypeIdent("BsonKey")), _), List(Literal(StringConstant(renamed))))) => Some(renamed)
+        case _                                                                                         => None
+    end getRenamedFieldName
+
     def parseConstant[A: Type](expr: Expr[Any])(definitions: Map[String, q.reflect.Term]): String =
       expr match
         case RenderedLiteral(repr) => repr
