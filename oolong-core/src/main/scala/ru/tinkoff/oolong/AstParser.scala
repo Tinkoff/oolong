@@ -5,6 +5,7 @@ import scala.language.postfixOps
 import scala.quoted.*
 
 import ru.tinkoff.oolong.AstParser
+import ru.tinkoff.oolong.QExpr.TypeQExprWrapper
 import ru.tinkoff.oolong.UExpr.FieldUpdateExpr
 import ru.tinkoff.oolong.Utils.*
 import ru.tinkoff.oolong.dsl.*
@@ -22,7 +23,7 @@ private[oolong] class DefaultAstParser(using quotes: Quotes) extends AstParser {
     def apply(t: T): Ast
   }
 
-  override def parseQExpr[Doc: Type](input: Expr[Doc => Boolean]): QExpr = {
+  override def parseQExpr[Doc: Type](input: Expr[Doc => Boolean]): TypeQExprWrapper[Doc] = {
 
     given makeConst[T]: MakeConst[T, QExpr] = (t: T) => QExpr.Constant(t)
 
@@ -150,7 +151,7 @@ private[oolong] class DefaultAstParser(using quotes: Quotes) extends AstParser {
         report.errorAndAbort("Unexpected expr while parsing AST: " + input.show + s"; term: ${showTerm(input.asTerm)}")
     }
 
-    parse(rhs.asExpr)
+    TypeQExprWrapper[Doc](parse(rhs.asExpr))
   }
 
   override def parseUExpr[Doc: Type](input: Expr[Updater[Doc] => Updater[Doc]]): UExpr = {

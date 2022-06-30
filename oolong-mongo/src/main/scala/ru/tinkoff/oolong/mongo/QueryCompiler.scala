@@ -5,6 +5,7 @@ import scala.quoted.*
 import org.mongodb.scala.bson.BsonDocument
 
 import ru.tinkoff.oolong.*
+import ru.tinkoff.oolong.QExpr.TypeQExprWrapper
 import ru.tinkoff.oolong.dsl.*
 
 /**
@@ -46,7 +47,7 @@ private[oolong] def queryImpl[Doc: Type](input: Expr[Doc => Boolean])(using quot
   val parser = new DefaultAstParser
 
   val ast          = parser.parseQExpr(input)
-  val optimizedAst = LogicalOptimizer.optimize(ast)
+  val optimizedAst = TypeQExprWrapper[Doc](LogicalOptimizer.optimize(ast.expr))
 
   val optRepr   = opt(optimizedAst)
   val optimized = optimize(optRepr)

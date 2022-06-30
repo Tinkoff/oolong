@@ -1,7 +1,6 @@
 package ru.tinkoff.oolong.mongo
 
-import scala.quoted.Expr
-import scala.quoted.Quotes
+import scala.quoted.*
 
 import org.mongodb.scala.bson.BsonBoolean
 import org.mongodb.scala.bson.BsonDocument
@@ -17,7 +16,7 @@ import ru.tinkoff.oolong.mongo.MongoUpdateNode as MU
 
 object MongoUpdateCompiler extends Backend[UExpr, MU, BsonDocument] {
 
-  def opt(ast: UExpr)(using quotes: Quotes): MU = {
+  def opt[T: Type](ast: UExpr)(using quotes: Quotes): MU = {
     import quotes.reflect.*
 
     ast match {

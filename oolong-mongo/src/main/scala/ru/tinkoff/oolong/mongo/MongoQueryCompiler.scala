@@ -1,7 +1,6 @@
 package ru.tinkoff.oolong.mongo
 
-import scala.quoted.Expr
-import scala.quoted.Quotes
+import scala.quoted.*
 
 import org.mongodb.scala.bson.BsonArray
 import org.mongodb.scala.bson.BsonBoolean
@@ -18,10 +17,18 @@ import ru.tinkoff.oolong.mongo.MongoQueryNode as MQ
 
 object MongoQueryCompiler extends Backend[QExpr, MQ, BsonDocument] {
 
-  override def opt(ast: QExpr)(using quotes: Quotes): MongoQueryNode = {
+  override def opt[T: Type](ast: QExpr)(using quotes: Quotes): MongoQueryNode = {
     import quotes.reflect.*
 
     ast match {
+      case QExpr.TypeQExprWrapper(ast) =>
+        println(TypeRepr.of[T].typeSymbol.caseFields.map(_.flags).map(_.show))
+        println(TypeRepr.of[T].typeSymbol.caseFields.map(_.declaredTypes));
+        println(TypeRepr.of[T].typeSymbol.caseFields.flatMap(_.declaredTypes))
+        println(TypeRepr.of[T].typeSymbol.caseFields.flatMap(_.declaredTypes).map(_.flags).map(_.show));
+        println(TypeRepr.of[T].typeSymbol.caseFields.flatMap(_.declaredTypes).map(_.caseFields));
+        println(TypeRepr.of[T].typeSymbol.caseFields.map(_.typeMembers));
+        opt(ast)
       case QExpr.Prop(path) => MQ.Field(path)
       case QExpr.Gte(x, y)  => MQ.OnField(getField(x), MQ.Gte(opt(y)))
       case QExpr.Lte(x, y)  => MQ.OnField(getField(x), MQ.Lte(opt(y)))

@@ -9,12 +9,12 @@ import ru.tinkoff.oolong.Utils.AsSome
 import ru.tinkoff.oolong.Utils.AsTerm
 import ru.tinkoff.oolong.bson.annotation.BsonKey
 
-private[oolong] object RenderUtils {
+private[oolong] object RenderUtils:
 
   def renderCaseClass[A: Type](value: Expr[A])(using q: Quotes): String =
     import q.reflect.*
 
-    def parseCaseClass[A: Type](value: Expr[A]): String = {
+    def parseCaseClass[A: Type](value: Expr[A]): String =
       val repr = TypeRepr.of[A].typeSymbol
       val paramsAndDefsOpt = value.asTerm.underlyingArgument.asExprOf[A] match
         case AsTerm(
@@ -76,7 +76,7 @@ private[oolong] object RenderUtils {
           }
           res.mkString("{", ", ", "}")
         case _ => "?"
-    }
+    end parseCaseClass
 
     def getRenamedFieldName(annot: Option[Term]): Option[String] =
       annot match
@@ -135,4 +135,4 @@ private[oolong] object RenderUtils {
 
   end RenderedLiteral
 
-}
+end RenderUtils

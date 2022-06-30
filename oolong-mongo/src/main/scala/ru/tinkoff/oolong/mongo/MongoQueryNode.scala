@@ -9,6 +9,9 @@ import ru.tinkoff.oolong.mongo.MongoQueryNode as MQ
 sealed trait MongoQueryNode
 
 case object MongoQueryNode {
+
+  case class TypedMongoQueryWrapper[T](node: MQ) extends MQ
+
   case class Field(path: List[String]) extends MQ
 
   case class OnField(field: Field, expr: MQ) extends MQ

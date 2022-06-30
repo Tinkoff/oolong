@@ -8,6 +8,8 @@ sealed private[oolong] trait QExpr
 
 private[oolong] object QExpr {
 
+  case class TypeQExprWrapper[T](expr: QExpr) extends QExpr
+
   case class Gte(x: QExpr, y: QExpr) extends QExpr
 
   case class Lte(x: QExpr, y: QExpr) extends QExpr
