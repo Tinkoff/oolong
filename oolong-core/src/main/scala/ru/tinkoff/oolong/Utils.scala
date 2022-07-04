@@ -110,4 +110,8 @@ private[oolong] object Utils {
       parse(expr.asTerm)
     }
   }
+
+  extension [A](sq: Seq[A]) {
+    def pforall(pf: PartialFunction[A, Boolean]): Boolean = sq.forall(pf.applyOrElse(_, _ => false))
+  }
 }
