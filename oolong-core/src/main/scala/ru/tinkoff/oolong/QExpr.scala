@@ -1,6 +1,9 @@
 package ru.tinkoff.oolong
 
+import scala.collection.immutable.Stream.Cons
+import scala.compiletime.asMatchable
 import scala.quoted.Expr
+import scala.util.Try
 
 import ru.tinkoff.oolong.QExpr
 
@@ -42,4 +45,22 @@ private[oolong] object QExpr {
   case class Exists(x: QExpr, y: QExpr) extends QExpr
 
   case class Size(x: QExpr, y: QExpr) extends QExpr
+
+  object NumericConstant {
+
+    /**
+     * Here we guarantee that Constant, Numeric & Class are consistent
+     */
+    def unapply(qe: QExpr): Option[(Constant[_], Numeric[_], Class[_])] =
+      qe match {
+        case bi @ Constant(_: Byte)        => Some(bi, Numeric[Byte], classOf[Byte])
+        case ci @ Constant(_: Int)         => Some(ci, Numeric[Int], classOf[Int])
+        case li @ Constant(_: Long)        => Some(li, Numeric[Long], classOf[Long])
+        case fi @ Constant(_: Float)       => Some(fi, Numeric[Float], classOf[Float])
+        case di @ Constant(_: Double)      => Some(di, Numeric[Double], classOf[Double])
+        case bii @ Constant(_: BigInt)     => Some(bii, Numeric[BigInt], classOf[BigInt])
+        case bdi @ Constant(_: BigDecimal) => Some(bdi, Numeric[BigDecimal], classOf[BigDecimal])
+        case _                             => None
+      }
+  }
 }
