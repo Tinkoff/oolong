@@ -54,6 +54,15 @@ val `oolong-bson` = (project in file("oolong-bson"))
     Test / fork := true,
   )
 
+val `oolong-json` = (project in file("oolong-json"))
+  .settings(Settings.common)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.apache.commons" % "commons-text" % "1.9"
+    ),
+    Test / fork := true
+  )
+
 val `oolong-core` = (project in file("oolong-core"))
   .settings(Settings.common)
   .dependsOn(`oolong-bson`)
@@ -76,6 +85,18 @@ val `oolong-mongo` = (project in file("oolong-mongo"))
       "org.scalatest"      %% "scalatest"                      % "3.2.12" % Test,
       "org.slf4j"           % "slf4j-api"                      % "1.7.36" % Test,
       "org.slf4j"           % "slf4j-simple"                   % "1.7.36" % Test,
+    ),
+    Test / fork := true
+  )
+
+val `oolong-elasticsearch` = (project in file("oolong-elasticsearch"))
+  .settings(Settings.common)
+  .dependsOn(`oolong-core`, `oolong-json`)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest"    % "3.2.11" % Test,
+      "org.slf4j"      % "slf4j-api"    % "1.7.36" % Test,
+      "org.slf4j"      % "slf4j-simple" % "1.7.36" % Test,
     ),
     Test / fork := true
   )
